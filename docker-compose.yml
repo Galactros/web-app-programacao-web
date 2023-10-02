@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+
+  postgres:
+    image: postgres:latest
+    volumes:
+      - ./create-script.sql:/docker-entrypoint-initdb.d/create-script.sql
+    environment:
+      POSTGRES_USER: "uiers"
+      POSTGRES_PASSWORD: "hudhsahuDSADas243"
+    ports:
+      - "5432:5432"
