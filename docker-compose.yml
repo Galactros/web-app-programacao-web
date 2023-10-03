@@ -1,6 +1,14 @@
 version: '3.8'
 
 services:
+  web:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - 80:80
+    depends_on:
+      - postgres
 
   postgres:
     image: postgres:latest
