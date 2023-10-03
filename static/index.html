@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Produtos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .produto-item {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Cadastro de Produtos</h1>
+        <form id="produto-form">
+            <label for="nome">Nome:</label>
+            <input type="text" id="nome" required>
+            <label for="preco">Preço:</label>
+            <input type="number" id="preco" step="0.01" required>
+            <button type="submit">Adicionar Produto</button>
+        </form>
+        <div id="produtos-lista"></div>
+    </div>
+
+    <script>
+        const produtoForm = document.getElementById("produto-form");
+        const produtosLista = document.getElementById("produtos-lista");
+
+        produtoForm.addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            const nome = document.getElementById("nome").value;
+            const preco = parseFloat(document.getElementById("preco").value);
+
+            fetch("http://localhost/produtos/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    codigo: 0,
+                    nome: nome,
+                    preco: preco
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                listarProdutos();
+            });
+        });
+
+        function listarProdutos() {
+            fetch("http://localhost/produtos/")
+            .then(response => response.json())
+            .then(produtos => {
+                produtosLista.innerHTML = "";
+                produtos.forEach(produto => {
+                    const produtoItem = document.createElement("div");
+                    produtoItem.className = "produto-item";
+                    produtoItem.innerHTML = `<strong>Código:</strong> ${produto[0]}<br><strong>Nome:</strong> ${produto[1]}<br><strong>Preço:</strong> R$ ${produto[2].toFixed(2)}<br><button onclick="editarProduto(${produto[0]}, '${produto[1]}', ${produto[2]})">Editar</button> <button onclick="excluirProduto(${produto[0]})">Excluir</button>`;
+                    produtosLista.appendChild(produtoItem);
+                });
+            });
+        }
+
+        function editarProduto(codigo, nome, preco) {
+            const novoNome = prompt("Novo nome:", nome);
+            const novoPreco = parseFloat(prompt("Novo preço:", preco));
+
+            if (novoNome !== null && novoPreco !== null) {
+                fetch(`http://localhost/produtos/${codigo}/`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        codigo: codigo,
+                        nome: novoNome,
+                        preco: novoPreco
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    listarProdutos();
+                });
+            }
+        }
+
+        function excluirProduto(codigo) {
+            if (confirm("Tem certeza que deseja excluir este produto?")) {
+                fetch(`http://localhost/produtos/${codigo}/`, {
+                    method: "DELETE"
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    listarProdutos();
+                });
+            }
+        }
+
+        listarProdutos();
+    </script>
+</body>
+
+</html>

@@ -1,9 +1,20 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Form
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import psycopg2
 import uvicorn 
 
+
+class Produto(BaseModel):
+    codigo: int | None
+    nome: str
+    preco: float
+
 app = FastAPI()
+templates = Jinja2Templates(directory="static")
 
 # Configurando CORS para permitir requisições de qualquer origem
 app.add_middleware(
@@ -25,13 +36,19 @@ conn = psycopg2.connect(
 cursor = conn.cursor()
 
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/", response_class=HTMLResponse, tags=["root"])
+def root_endpoint(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
 @app.post("/produtos/")
-async def criar_produto(nome: str, preco: float):
+async def criar_produto(produto: Produto):
     try:
-        cursor.execute("INSERT INTO produtos (nome, preco) VALUES (%s, %s) RETURNING codigo;", (nome, preco))
-        codigo = cursor.fetchone()[0]
+        cursor.execute("INSERT INTO produtos (nome, preco) VALUES (%s, %s) RETURNING codigo;", (produto.nome, produto.preco))
+        produto.codigo = cursor.fetchone()[0]
         conn.commit()
-        return {"codigo": codigo, "nome": nome, "preco": preco}
+        return produto
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
@@ -48,11 +65,11 @@ async def listar_produtos():
 
 
 @app.put("/produtos/{codigo}/")
-async def atualizar_produto(codigo: int, nome: str, preco: float):
+async def atualizar_produto(produto: Produto):
     try:
-        cursor.execute("UPDATE produtos SET nome = %s, preco = %s WHERE codigo = %s;", (nome, preco, codigo))
+        cursor.execute("UPDATE produtos SET nome = %s, preco = %s WHERE codigo = %s;", (produto.nome, produto.preco, produto.codigo))
         conn.commit()
-        return {"message": f"Produto de código {codigo} atualizado com sucesso."}
+        return {"message": f"Produto de código {produto.codigo} atualizado com sucesso."}
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
